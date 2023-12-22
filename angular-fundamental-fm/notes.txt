@@ -1,0 +1,246 @@
+Angular is scalable in terms of project and , in terms of team. 
+
+New way to get dynamic route parameter (check the project 8 example)
+-------------------------------------
+export const routes: Routes = [
+  { path: '', component: HomeComponent },
+  { path: 'details/:id', component: DetailsComponent },
+];
+
+
+export class DetailsComponent {
+  productId = -1;
+
+  @Input()
+  set id(value: number) {   ---> here you are getting directly id route parameter 
+    this.productId = value;
+    console.log(value);
+  }
+}
+
+
+for achive above you need to include something new in the config file
+
+app.config.ts
+-----------------------
+
+import { ApplicationConfig } from '@angular/core';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+
+import { routes } from './app.routes';
+
+export const appConfig: ApplicationConfig = {
+  providers: [provideRouter(routes, withComponentInputBinding())],
+};
+
+here you need to pass withComponentInputBinding() along with routes, so ypu will get dynamic property into the setter.
+
+dipendency Injection
+--------------------
+dipendency Injection is a design pattern, which is used by angualar, when we initiate service instatne , it gives us a singleto object. 
+we have now syntax chnage from previous version we can inject service like new way using inject function.
+
+
+app.component.ts
+-----------------
+import { Component, inject } from '@angular/core';
+import { UserService } from './user.service';
+import { User } from './data';
+import { UserInfoComponent } from './user-info/user-info.component';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [UserInfoComponent],
+  template: `
+    <h1>User Listing</h1>
+    @for (user of userData; track user.id) {
+    <app-user-info [user]="user"></app-user-info>
+    }
+  `,
+})
+export class AppComponent {
+  userData: User[] = [];
+  private userService = inject(UserService); ---> new way to initiate service instance
+  //constructor(private userService: UserService) {} ---> old way to initiate service instance
+  constructor() {}
+
+  ngOnInit() {
+    this.userService.getUserData().then((data) => {
+      this.userData = data;
+      console.log(data);
+    });
+  }
+}
+
+
+Angular Signal
+--------------
+Since begning in angular change detection is happening from zone, zone means your whole application inside one box , which identify and calculate when chages is done, in big application scalable application , there is the problem this thing makes application slow , so now as per time angular come with new concepts that is caled signal , which makes reactivity faster , this is not publish/subsribe pattern , this is something new and diffrent. 
+
+Angular Signals is a system that granularly tracks how and where your state is used throughout an application, allowing the framework to optimize rendering updates.
+
+Three reactive primitives
+------------------------
+--> 1) signal
+--> 2) computed
+--> 3) effect
+
+--> 1) signal
+**************
+A value that can tell Angular when it canges, capable of notifying its context of future changes in its value. sihnal return a function and that function is smart enough to notify ans subscribe thing.
+
+--> 2) computed
+***************
+Derive new value when one of the dependent signal changes. a computed let you update a signal value based on othe signal value, this also return a function , and take a callback. this will not run everytime , if anu signal changes then only it will run and give a new updated value else it will return only cache value.
+
+--> 3) effect
+***************
+An effect a side-effectful operation which reads the value of zero or more signals. effcet is some behaviour you can do if any signal is changd, like for example you can use this for debug , in case some signal changes and you want to debug something. effect also takes a callback function.
+
+
+app.component.ts
+----------------
+import { Component, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Todo } from './todo';
+import { FormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+    <h1>Building a TODO List</h1>
+
+    @for (todo of todos(); track $index) {
+    <label
+      [for]="todo.id"
+      [ngStyle]="{
+        'text-decoration': todo.completed ? 'line-through' : 'none'
+      }"
+    >
+      <input
+        type="checkbox"
+        [id]="todo.id"
+        [checked]="todo.completed"
+        (change)="updateTodo(todo)"
+      />
+      {{ todo.title }}
+    </label>
+
+    }
+
+    <P>completed item : {{ completedTdo() }}</P>
+
+    <!-- play  with signal -->
+
+    <!-- <p>{{ firstName() }}</p>
+    <p>{{ lastName() | json }}</p>
+    <p>{{ Output() }}</p> -->
+  `,
+  styles: `label { display: block }`,
+})
+export class AppComponent {
+  updateTodo(todo: Todo) {
+    this.todos.update((todosList) => {
+      console.log(todosList);
+      return todosList.map((itemTodo) => {
+        if (itemTodo.id === todo.id) {
+          itemTodo.completed = !itemTodo.completed;
+        }
+        return itemTodo;
+      });
+    });
+  }
+
+  todos = signal<Todo[]>([
+    {
+      id: 1,
+      title: 'Learn Angular',
+      completed: false,
+    },
+    {
+      id: 2,
+      title: 'Learn TypeScript',
+      completed: false,
+    },
+    {
+      id: 3,
+      title: 'Learn RxJS',
+      completed: false,
+    },
+  ]);
+
+  completedTdo = computed(() => {
+    return this.todos().filter((todoItem) => todoItem.completed === true)
+      .length;
+  });
+
+  // play  with signal
+
+  // firstName = signal<string>('sarang');
+  // lastName = signal<string>('jain');
+  // Output = computed(() => {
+  //   return `fullname is ${this.firstName()} and last name ${this.lastName()}`;
+  // });
+}
+
+
+
+
+
+Deferrable Views
+-----------------
+lazy loading helps keep initial bundle size smaller. you can achive this to do some fancy configuration a srouter level, means some part of application and dont ship until some meaningful happens.
+
+Deferrable Views , means in the  conponete template dont send or ship  some lines or some template parts until some meaningful happens. 
+
+Deferrable views can be used in component template to defer the loading of select dependencies within that template. Those dependencies include components, directives, and pipes, and any associated CSS. To use this feature, you can declaratively wrap a section of your template in a @defer block which specifies the loading conditions.
+
+@defer(){} --> A type of block that can be used to defer load the JavaScript for components, directives and pipes used inside a component template.
+
+Robust powerful triggers
+------------------------
+1) on include
+2) on immediate
+3) on timer(...)
+4) on viewport(...)
+5) on interaction(...)
+
+
+app.component.ts
+----------------
+import { Component } from '@angular/core';
+import { PostsComponent } from './posts/posts.component';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [PostsComponent],
+  template: `
+    <section class="container">
+      <h1>Deferrable Views Example</h1>
+      <button #loadPosts>Load Posts</button>
+      @defer(on interaction(loadPosts)){
+      <app-posts />
+      }@loading {
+      <p>Please wait</p>
+      }@placeholder {
+      <img
+        src="”placeholder.png”"
+        alt="”placeholder”"
+        width="100"
+        height="100"
+      />
+      }@error {
+      <p>some error is there</p>
+      }
+    </section>
+  `,
+})
+export class AppComponent {}
+
+
+The Angular CLI
+===============
