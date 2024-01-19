@@ -1,0 +1,264 @@
+Rxjs Terminology
+=================
+rxjs has 5 main terminology.
+1) datasource
+2) Observable
+3) observer
+4) subscribe
+5) subscription
+6) unsubscribe
+
+
+1,2) Observable is a special type of object which inside datasource emit there data. datasouurce has 2 way to emit there data , that is next , error, complete().
+
+3) observer is the object of 3 property, which react when observable emit data , error , and complete notification.
+
+4) obesrvable will not work until we subscribe it .
+
+5) every observable.subscibe() , written the subscription , which is used to unsubscibe the obervable to prevent memory leave , every obseravalble must be unsubscribed.
+
+
+
+rxjs , is the liberary , which is sololy used with javascript , and any framework , but angular extensively used this liberary. inside thier ecosystem. so 90 percent time you will not be creating observable obervable will be there for you you will be subscribing it and performing operation on it.
+
+
+example
+-------------
+let appleConveyorBeltObersavble$ = new Observable((appleDataSource) =>{
+		appleDataSource.next('🍏');
+		appleDataSource.next('🍏');
+		appleDataSource.error('Electricty issue is there');
+		appleDataSource.complete();
+ })
+ 
+ 
+let observer = {
+  next: (data) => { console.log(data) }
+  error:(err) =>  { console.log(err) }
+  complete:() => console.log('completed')
+} 
+
+
+let subscription = appleConveyorBeltObersavble$.subscibe(observer);
+
+let subscription2 = appleConveyorBeltObersavble$.subscibe(
+	(data)=> console.log(data),
+	(err) => console.log(err),
+	() => console.log('completed');
+);
+
+
+// while your component destroy , and work done unsubscribe it .
+
+
+subscription.unsubscibe();
+subscription2.unsubscibe();
+
+
+so here we have created observable and implemented all the terminology , now we dont have to create obeservable by obseravalble constructor function , we have multiple creation obseravalble function which we can use to get directly obesravle , like of , from , fromEvent which gives you observable directly. for example
+
+let ofSubscrption   =   of(1,2,3).subscribe((data)=> console.log(data)); 
+
+let fromSubscrption = from([1,2,3]).subscribe((data)=> console.log(data));
+
+so mostly , creation obesravble function once imit all the data . it complete autmatically.
+
+// while destroying 
+subscrption.unsubscibe();
+fromSubscrption.unsubscibe();
+
+
+diffrence between complete and unsubscribe
+===========================================
+if you complete an observable, it will call complete() method then the teardown logic and unsubscribe(). calling unsubscribe() itself does not call complete method. angular async pipe is an example of calling unsubscribe. therefore, if you have complete method and using async pipe, it will not be called.
+
+you complete an observable, and unsubscribe a subscription. these are two different methods on two different objects. you subscribe to an observable which returns a subscription object.
+
+if you want to stop listening to emits from the observable you call subscription.unsubscribe(). if you want an observable to be done with his task, you call observable.complete(). the complete method in itself will also unsubscribe any possible subscriptions.
+
+
+RxJs operator
+---------------
+we have rxjs pipe operator , which takes obseravalble , subscibe them , and fo the operation , and again convert to the obseravale and send ahed.
+
+of(2,4,6)
+	.pipe(
+	  map((data)=> data*2),
+	  tap((data)=> console.log(data)),
+	  take(3)
+	 )
+	.subscibe((data)=>{
+	   console.log(data)
+	 });
+	 
+So here you can see we have three rxjs oparator , map , tap , and take
+
+so lets see what is happening there.
+
+map((data)=> data*2),
+
+--> map taking obseravle that is of(2) , subscibe it , perform the oparation 2*2 and create a observable of this result and pass to the next oparetor, that is tap.
+
+tap((data)=> console.log(data)),
+
+--> tap is taking output obesravble from map that is of(4), and subscibe it and log the data to the console, and create a observable and pass to the next oparetor, and send to take().
+
+take(3)
+take is taking output from tap subscribe it and again do their respective operation , and make and send obesravle again to the final subscibe method().
+
+so this is the basic manner ghow rxjs operator works. 
+
+
+rxjs Operator : map() :-
+=====================
+map is transform operator,  item is transformmed as specified by the provided function, transformed item obseravalble is emitted.
+
+export class App {
+  name = 'Angular';
+  subCar!: Subscription;
+
+  ngOnInit() {
+    const car$ = from([
+      { name: 'maruti', modal: '1990' },
+      { name: 'neno', modal: '2005' }, 
+      { name: 'thar', modal: '2023' },
+    ]);
+
+    this.subCar = car$
+      .pipe(map((c) => ({ ...c, color: 'red' })))
+      .subscribe((car) => console.log(car));
+  }
+
+  ngOnDestroy() {
+    this.subCar.unsubscribe();
+  }
+}
+
+rxjs Operator : tap() :-
+=====================
+its utility operator , taps into the emissions without affecting the item , for each item emitted in , the same item is emitted out , this is used for 
+--> Debugging,
+--> Performing actions outside of the flow of data(side effects)
+
+  ngOnInit() {
+    const car$ = from([
+      { name: 'maruti', modal: '1990' },
+      { name: 'neno', modal: '2005' },
+      { name: 'thar', modal: '2023' },
+    ]);
+
+    this.subCar = car$
+      .pipe(
+        map((c) => ({ ...c, color: 'red' })),
+        tap((c) => {
+          console.info(c);
+        }),
+        tap(this.logFromOutside)
+      )
+      .subscribe((car) => console.log(car));
+  }
+
+  ngOnDestroy() {
+    this.subCar.unsubscribe();
+  }
+
+  logFromOutside(c: any) {
+    console.table(c);
+  }
+}
+
+rxjs Operator : filter() :-
+=====================
+it emits out the match criteria specified in a provided function , it is similar to the array filter function it is used for
+--> Emitted items that match specific criteria
+--> filtering out null  undefined values
+
+export class App {
+  name = 'Angular';
+  subCar!: Subscription;
+
+  ngOnInit() {
+    const car$ = from([
+      { name: 'maruti', modal: 1990 },
+      { name: 'neno', modal: 2005 },
+      { name: 'thar', modal: 2023 },
+    ]);
+
+    this.subCar = car$
+      .pipe(
+        map((c) => ({ ...c, color: 'red' })),
+        tap((c) => {
+          console.info('->', c);
+        }),
+        tap(this.logFromOutside),
+        filter((c) => c.modal > 2000)
+      )
+      .subscribe((car) => console.warn('===>', car));
+  }
+
+  ngOnDestroy() {
+    this.subCar.unsubscribe();
+  }
+
+  logFromOutside(c: any) {
+    console.log('=>', c);
+  }
+}
+
+
+rxjs Operator : take(noOfTime) :-
+=================================
+Emits a specified number of items  take(2)
+Automatically completes after taking the specified number of items , it is used for
+--> Taking a specified numbers of items
+--> Limiting unlimited observables , like created by timer observable.
+--> take operator postion matter in the pipeline , it matters where you have written this operator.
+
+
+export class App {
+  name = 'Angular';
+  subCar!: Subscription;
+  subTimer!: Subscription;
+
+  ngOnInit() {
+    const car$ = from([
+      { name: 'maruti', modal: 1990 },
+      { name: 'neno', modal: 2005 },
+      { name: 'thar', modal: 2023 },
+    ]);
+
+    this.subCar = car$
+      .pipe(
+        map((c) => ({ ...c, color: 'red' })),
+        tap((c) => {
+          console.info('->', c);
+        }),
+        tap(this.logFromOutside),
+        filter((c) => c.modal > 2000),
+        take(1)
+      )
+      .subscribe((car) => console.warn('===>', car));
+
+    this.subTimer = timer(0, 1000)
+      .pipe(take(5))
+      .subscribe({
+        next: (data) => console.log(data),
+        error: (err) => console.log(err),
+        complete: () => console.log('Its completed'),
+      });
+  }
+
+  ngOnDestroy() {
+    this.subCar.unsubscribe();
+    this.subTimer.unsubscribe();
+  }
+
+  logFromOutside(c: any) {
+    console.log('=>', c);
+  }
+}
+
+here timer is a obseravalble time interval creation function , which starts from 0 , and take two parameter timer(when_firt-will_emit , interval_time_for_value), here we have applied take(5 operator , which takes value till 5 and automatically completed.
+
+
+
